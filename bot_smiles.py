@@ -33,9 +33,6 @@ app.add_handler(CommandHandler("buscar", buscar))
 # Configurar Webhook en Render
 PORT = int(os.environ.get("PORT", 8443))
 
-if __name__ == "__main__":
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/"
+        if __name__ == "__main__":
+    app.run_polling()
     )
