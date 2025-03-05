@@ -1,56 +1,41 @@
 import os
-import requests
-import datetime
-from bs4 import BeautifulSoup
+import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 
-TOKEN = os.getenv("TOKEN")
+# Configurar logging
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-def convertir_fecha_a_timestamp(fecha_str):
-    """Convierte una fecha en formato YYYY-MM-DD a timestamp en milisegundos."""
-    fecha_dt = datetime.datetime.strptime(fecha_str, "%Y-%m-%d")
-    timestamp = int(fecha_dt.timestamp() * 1000)
-    return timestamp
+# Obtener el Token del bot desde las variables de entorno
+TOKEN = os.getenv("BOT_TOKEN")
 
+# Función de inicio
 async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text("👋 ¡Hola! Envíame /buscar ORIGEN DESTINO YYYY-MM-DD para buscar pasajes en Smiles.")
+    await update.message.reply_text("👋 ¡Hola! Envíame /buscar ORIGEN DESTINO FECHA para buscar pasajes en Smiles.")
 
+# Función para buscar pasajes (simulación)
 async def buscar(update: Update, context: CallbackContext):
     if len(context.args) < 3:
-        await update.message.reply_text("⚠️ Formato incorrecto. Usa: `/buscar ORIGEN DESTINO YYYY-MM-DD`")
+        await update.message.reply_text("⚠️ Formato incorrecto. Usa: `/buscar ORIGEN DESTINO FECHA`")
         return
 
     origen, destino, fecha = context.args
-    fecha_timestamp = convertir_fecha_a_timestamp(fecha)
-
     await update.message.reply_text(f"🔍 Buscando pasajes de **{origen}** a **{destino}** para el **{fecha}**... 🚀")
 
-    url = f"https://www.smiles.com.ar/emission?originAirportCode={origen}&destinationAirportCode={destino}&departureDate={fecha_timestamp}&adults=1&children=0&infants=0&isFlexibleDateChecked=false&tripType=1&cabinType=all&currencyCode=BRL"
+    # Aquí iría la lógica para consultar Smiles
+    await update.message.reply_text("❌ No encontramos pasajes disponibles en Smiles.")
 
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Ajustar estos selectores según el HTML real de Smiles
-        vuelos = soup.find_all("div", class_="flight-option")  # Ver si esta clase es correcta en Smiles
-
-        if vuelos:
-            resultados = "\n".join(
-                [f"✈️ {vuelo.find('span', class_='route').text} - {vuelo.find('span', class_='price').text} millas" for vuelo in vuelos]
-            )
-            await update.message.reply_text(f"✅ Pasajes encontrados:\n{resultados}")
-        else:
-            await update.message.reply_text("❌ No encontramos pasajes disponibles en Smiles.")
-
-    except Exception as e:
-        await update.message.reply_text(f"⚠️ Error al buscar vuelos: {e}")
-
-# Configurar el bot
+# Configurar la aplicación de Telegram
 app = Application.builder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("buscar", buscar))
 
+# Configurar Webhook en Render
+PORT = int(os.environ.get("PORT", 8443))
+
 if __name__ == "__main__":
-    app.run_polling()
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/"
+    )
